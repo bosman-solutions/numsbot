@@ -1,0 +1,17 @@
+# secrets
+.env
+
+# runtime data — server specific, never commit
+data/places.json
+data/config.json
+
+# logs
+logs/
+
+# build artifacts
+numsbot.zip
+
+# python
+__pycache__/
+*.pyc
+.venv/

@@ -1,0 +1,18 @@
+services:
+  numsbot:
+    build: .
+    container_name: numsbot
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - numsbot_data:/app/data
+      - numsbot_logs:/app/logs
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  numsbot_data:
+  numsbot_logs:
