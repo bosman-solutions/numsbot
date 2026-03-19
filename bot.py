@@ -18,8 +18,8 @@ from numsbot import NumsBot
 
 load_dotenv()
 
-TOKEN    = os.getenv("DISCORD_TOKEN")
-ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
+TOKEN     = os.getenv("DISCORD_TOKEN")
+ADMIN_ID  = int(os.getenv("ADMIN_ID", "0"))
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 GUILD_ID  = int(os.getenv("GUILD_ID", "0"))
 VERSION   = "0.3.4"
@@ -95,13 +95,15 @@ async def on_ready():
 
     try:
         if GUILD_ID:
-            # guild sync — instant, use this for single-server bots
-            guild  = discord.Object(id=GUILD_ID)
+            guild = discord.Object(id=GUILD_ID)
+            # copy all commands to the guild and sync — instant
             bot.tree.copy_global_to(guild=guild)
             synced = await bot.tree.sync(guild=guild)
-            log.info(f"Synced {len(synced)} slash commands to guild {GUILD_ID}")
+            # wipe global commands so there are no duplicates
+            bot.tree.clear_commands(guild=None)
+            await bot.tree.sync()
+            log.info(f"Synced {len(synced)} slash commands to guild {GUILD_ID}, globals cleared")
         else:
-            # global sync — can take up to an hour on new servers
             synced = await bot.tree.sync()
             log.info(f"Synced {len(synced)} slash commands globally")
     except Exception as e:
