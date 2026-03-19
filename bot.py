@@ -1,7 +1,9 @@
 """
 bot.py — NumsBot entrypoint
-version: 0.3.3
+version: 0.3.4
 Slash commands only. Prefix commands disabled.
+Guild sync when GUILD_ID is set — instant propagation.
+Falls back to global sync if not set.
 """
 
 import os
@@ -16,10 +18,11 @@ from numsbot import NumsBot
 
 load_dotenv()
 
-TOKEN     = os.getenv("DISCORD_TOKEN")
-ADMIN_ID  = int(os.getenv("ADMIN_ID", "0"))
+TOKEN    = os.getenv("DISCORD_TOKEN")
+ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
-VERSION   = "0.3.3"
+GUILD_ID  = int(os.getenv("GUILD_ID", "0"))
+VERSION   = "0.3.4"
 
 # ── Logging ──────────────────────────────────────────────────────────────────
 os.makedirs("logs", exist_ok=True)
@@ -54,9 +57,6 @@ log = logging.getLogger("numsbot")
 
 
 # ── Bot — slash commands only ────────────────────────────────────────────────
-# Use a never-matching prefix so prefix commands are impossible.
-# All interaction is via slash commands only.
-
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members          = True
@@ -65,7 +65,7 @@ intents.reactions        = True
 bot = commands.Bot(
     command_prefix="\x00",   # null byte — will never match anything typed
     intents=intents,
-    help_command=None,        # disable built-in !help
+    help_command=None,
 )
 bot.admin_id = ADMIN_ID
 bot.nb       = NumsBot()
@@ -94,8 +94,16 @@ async def on_ready():
         log.info(f"Places channel: {bot.nb.config.places_channel_id}")
 
     try:
-        synced = await bot.tree.sync()
-        log.info(f"Synced {len(synced)} slash commands globally")
+        if GUILD_ID:
+            # guild sync — instant, use this for single-server bots
+            guild  = discord.Object(id=GUILD_ID)
+            bot.tree.copy_global_to(guild=guild)
+            synced = await bot.tree.sync(guild=guild)
+            log.info(f"Synced {len(synced)} slash commands to guild {GUILD_ID}")
+        else:
+            # global sync — can take up to an hour on new servers
+            synced = await bot.tree.sync()
+            log.info(f"Synced {len(synced)} slash commands globally")
     except Exception as e:
         log.error(f"Slash sync error: {e}")
 
